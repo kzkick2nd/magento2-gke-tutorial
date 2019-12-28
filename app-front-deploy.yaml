@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: magento-front
+  labels:
+    app: magento
+    component: frontend
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  selector:
+    app: magento
+    component: frontend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: magento
+  labels:
+    app: magento
+    component: frontend
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 0%
+  selector:
+    matchLabels:
+      app: magento
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: magento
+        component: frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+      containers:
+        - image: asia.gcr.io/[PROJECT]/magento:1
+          name: magento
+          resources:
+            requests:
+              memory: 2800Mi
+              cpu: 1000m
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /pub/health_check.php
+              port: 8080
+            initialDelaySeconds: 60
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - "cp -r /var/www/magento/app/nfs_etc/* /var/www/magento/app/etc \
+                    && cp -r /var/www/magento/nfs_generated/* /var/www/magento/generated \
+                    && cp -r /var/www/magento/pub/nfs_static/* /var/www/magento/pub/static \
+                    && cp -r /var/www/magento/var/nfs_view_preprocessed/* /var/www/magento/var/view_preprocessed"
+          volumeMounts:
+            - name: nfs-upload-pvc
+              mountPath: /var/www/magento/pub/media/upload
+            - name: nfs-tmp-pvc
+              mountPath: /var/www/magento/pub/media/tmp
+            - name: nfs-catalog-pvc
+              mountPath: /var/www/magento/pub/media/catalog
+            - name: nfs-etc-pvc
+              mountPath: /var/www/magento/app/nfs_etc
+              readOnly: true
+            - name: nfs-view-preprocessed-pvc
+              mountPath: /var/www/magento/var/nfs_view_preprocessed
+              readOnly: true
+            - name: nfs-generated-pvc
+              mountPath: /var/www/magento/nfs_generated
+              readOnly: true
+            - name: nfs-static-pvc
+              mountPath: /var/www/magento/pub/nfs_static
+              readOnly: true
+      volumes:
+        - name: nfs-etc-pvc
+          persistentVolumeClaim:
+            claimName: nfs-etc-pvc
+        - name: nfs-upload-pvc
+          persistentVolumeClaim:
+            claimName: nfs-upload-pvc
+        - name: nfs-tmp-pvc
+          persistentVolumeClaim:
+            claimName: nfs-tmp-pvc
+        - name: nfs-catalog-pvc
+          persistentVolumeClaim:
+            claimName: nfs-catalog-pvc
+        - name: nfs-view-preprocessed-pvc
+          persistentVolumeClaim:
+            claimName: nfs-view-preprocessed-pvc
+        - name: nfs-generated-pvc
+          persistentVolumeClaim:
+            claimName: nfs-generated-pvc
+        - name: nfs-static-pvc
+          persistentVolumeClaim:
+            claimName: nfs-static-pvc

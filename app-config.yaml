@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: magento-config
+data:
+  URL: "http://[ここに magento-front ロードバランサーIP]/"
+  DB_HOST: [ここに DB インスタンスのプライベートIP]
+  DB_NAME: magento
+  DB_USER: magento
+  ADMIN_USER: admin
+  ADMIN_EMAIL: [ここに管理メールアドレス]

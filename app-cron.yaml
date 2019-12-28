@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: magento-cron
+  labels:
+    app: magento
+    component: cron
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: magento
+      component: cron
+  template:
+    metadata:
+      labels:
+        app: magento
+        component: cron
+    spec:
+      securityContext:
+        runAsUser: 0
+      containers:
+        - image: asia.gcr.io/[PROJECT]/magento:1
+          name: magento
+          resources:
+            requests:
+              memory: 1000Mi
+              cpu: 500m
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - "cp -r /var/www/magento/app/nfs_etc/* /var/www/magento/app/etc \
+                    && cp -r /var/www/magento/nfs_generated/* /var/www/magento/generated \
+                    && cp -r /var/www/magento/pub/nfs_static/* /var/www/magento/pub/static \
+                    && cp -r /var/www/magento/var/nfs_view_preprocessed/* /var/www/magento/var/view_preprocessed \
+                    && bin/magento cron:install --force \
+                    && service cron start"
+          volumeMounts:
+            - name: nfs-upload-pvc
+              mountPath: /var/www/magento/pub/media/upload
+            - name: nfs-tmp-pvc
+              mountPath: /var/www/magento/pub/media/tmp
+            - name: nfs-etc-pvc
+              mountPath: /var/www/magento/app/nfs_etc
+            - name: nfs-view-preprocessed-pvc
+              mountPath: /var/www/magento/var/nfs_view_preprocessed
+            - name: nfs-generated-pvc
+              mountPath: /var/www/magento/nfs_generated
+            - name: nfs-static-pvc
+              mountPath: /var/www/magento/pub/nfs_static
+      volumes:
+        - name: nfs-etc-pvc
+          persistentVolumeClaim:
+            claimName: nfs-etc-pvc
+        - name: nfs-upload-pvc
+          persistentVolumeClaim:
+            claimName: nfs-upload-pvc
+        - name: nfs-tmp-pvc
+          persistentVolumeClaim:
+            claimName: nfs-tmp-pvc
+        - name: nfs-view-preprocessed-pvc
+          persistentVolumeClaim:
+            claimName: nfs-view-preprocessed-pvc
+        - name: nfs-generated-pvc
+          persistentVolumeClaim:
+            claimName: nfs-generated-pvc
+        - name: nfs-static-pvc
+          persistentVolumeClaim:
+            claimName: nfs-static-pvc

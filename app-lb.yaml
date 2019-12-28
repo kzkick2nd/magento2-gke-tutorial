@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: magento-admin-lb
+spec:
+  type: LoadBalancer
+  ports:
+    - name: "http-port"
+      protocol: "TCP"
+      port: 80
+      targetPort: 80
+  selector:
+    app: magento-admin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: magento-front-lb
+spec:
+  type: LoadBalancer
+  ports:
+    - name: "http-port"
+      protocol: "TCP"
+      port: 80
+      targetPort: 80
+  selector:
+    app: magento-front
